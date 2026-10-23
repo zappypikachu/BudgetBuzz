@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DayWise — Daily Budget & Savings Vault Dashboard</title>
+  <meta name="description" content="Intelligent daily expense tracking in Rupees (₹), budget allocation, dynamic day limits, weekly fixed deductions, and automated savings vault.">
+  
+  <!-- Modern Typography from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Canvas for celebration confetti -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <div class="app-container" id="app">
+    <!-- Top Navigation Bar -->
+    <header class="navbar" id="mainNavbar">
+      <div class="logo-group">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <h1>DayWise</h1>
+          <span>Daily Expense & Savings Vault</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs: Dashboard vs Analysis -->
+      <nav class="nav-tabs" aria-label="Main Navigation">
+        <button class="nav-tab active" id="navTabDashboard">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </button>
+        <button class="nav-tab" id="navTabAnalysis">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Analysis
+        </button>
+      </nav>
+
+      <div class="nav-user-section" id="navUserSection">
+        <div class="user-badge" id="userBadge" style="cursor: pointer;" title="Click to view/edit profile & fixed expenses">
+          <div class="user-avatar" id="userAvatar">U</div>
+          <div class="user-meta">
+            <span class="user-name" id="userNameDisplay">Guest</span>
+            <span class="user-status" id="userStatusTag">Active Profile</span>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary btn-sm" id="btnOpenProfile" title="Edit Profile, Permanent Base Salary & Weekly Fixed Deductions">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profile & Rules
+        </button>
+
+        <button class="btn btn-ghost btn-sm" id="btnLoadDemo" title="Load sample 90-day Indian Rupee dataset">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Demo Data (90D)
+        </button>
+
+        <button class="btn btn-danger-soft btn-sm" id="btnLogout" title="Log out of current profile">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Logout
+        </button>
+      </div>
+    </header>
+
+    <!-- VIEW 1: DASHBOARD VIEW -->
+    <div id="dashboardView" class="view-section">
+      <!-- Exceeded Limit Warning Alert Banner -->
+      <div class="warning-banner" id="warningBanner" role="alert">
+        <div class="warning-content">
+          <div class="warning-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div>
+            <div class="warning-title" id="warningTitle">⚠️ Daily Budget Limit Exceeded!</div>
+            <div class="warning-desc" id="warningDesc">Your expenses for today have exceeded your daily allocation limit. Consider reducing spending for the rest of the day.</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-sm btn-secondary" id="btnDismissWarning">Dismiss</button>
+        </div>
+      </div>
+
+      <!-- 4 Key Metrics Cards -->
+      <section class="stat-grid" aria-label="Key Financial Metrics">
+        <!-- 1. Monthly Salary -->
+        <div class="glass-card stat-card">
+          <div class="stat-card-header">
+            <span class="stat-title">Monthly Salary Pool</span>
+            <div class="stat-icon salary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </div>
+          </div>
+          <div class="stat-value" id="statSalaryDisplay">₹0.00</div>
+          <div class="stat-subtext">
+            <span id="statMonthDays">31 days</span> in <strong id="statCurrentMonthName">Current Month</strong>
+          </div>
+        </div>
+
+        <!-- 2. Standard Daily Allowance -->
+        <div class="glass-card stat-card">
+          <div class="stat-card-header">
+            <span class="stat-title">Standard Daily Budget</span>
+            <div class="stat-icon budget">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+          </div>
+          <div class="stat-value" id="statDailyLimitDisplay">₹0.00</div>
+          <div class="stat-subtext">
+            <span>Auto-balanced limit:</span> <strong id="statDailyFormula">= ₹0/day</strong>
+          </div>
+        </div>
+
+        <!-- 3. Today's Expense -->
+        <div class="glass-card stat-card" id="cardTodaySpent">
+          <div class="stat-card-header">
+            <span class="stat-title" id="statSelectedDateTitle">Today's Expense</span>
+            <div class="stat-icon spent">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            </div>
+          </div>
+          <div class="stat-value" id="statTodaySpentDisplay">₹0.00</div>
+          <div class="stat-subtext" id="statSpentRemainingSubtext">
+            Remaining today: <strong id="statTodayRemainingDisplay">₹0.00</strong>
+          </div>
+        </div>
+
+        <!-- 4. Savings Vault -->
+        <div class="glass-card stat-card savings-highlight">
+          <div class="stat-card-header">
+            <span class="stat-title">Savings Vault (Banked)</span>
+            <div class="stat-icon savings">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h1a2 2 0 0 0 2-2V8a3 3 0 0 0-3-3z"/><line x1="16" y1="9" x2="16.01" y2="9"/></svg>
+            </div>
+          </div>
+          <div class="stat-value" id="statSavingsVaultDisplay">₹0.00</div>
+          <div class="stat-subtext">
+            Banked from unspent daily money: <strong id="statSavingsRate">0%</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- Main Dashboard Grid -->
+      <main class="dashboard-grid">
+        <!-- Left Column: Daily Expense Tracker -->
+        <section class="glass-card tracker-card" aria-label="Daily Expense Tracker">
+          <div class="section-header">
+            <div>
+              <h2>
+                <span id="trackerHeaderDay">Today's Expenses</span>
+                <span class="date-badge" id="badgeSelectedDate">Oct 23, 2026</span>
+              </h2>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn btn-secondary btn-sm" id="btnPrevDay" title="Previous Day">◀</button>
+              <button class="btn btn-secondary btn-sm" id="btnTodayQuick" title="Jump to Today">Today</button>
+              <button class="btn btn-secondary btn-sm" id="btnNextDay" title="Next Day">▶</button>
+            </div>
+          </div>
+
+          <!-- Gauge / Progress Bar -->
+          <div class="day-gauge-wrapper">
+            <div class="gauge-metrics">
+              <div>
+                <div class="gauge-label">Day Spend Limit Progress</div>
+                <div class="gauge-figures">
+                  <span class="spent-val" id="gaugeSpentText">₹0.00</span>
+                  <span class="limit-val" id="gaugeLimitText">/ ₹0.00</span>
+                </div>
+              </div>
+              <div>
+                <span class="gauge-status-tag safe" id="gaugeStatusBadge">Within Limit</span>
+              </div>
+            </div>
+
+            <div class="progress-track">
+              <div class="progress-fill safe" id="gaugeProgressBar"></div>
+            </div>
+
+            <div class="gauge-footer">
+              <span id="gaugePercentText">0% of daily limit spent</span>
+              <span id="gaugeRemainingText">Leftover: ₹0.00</span>
+            </div>
+
+            <!-- Day Budget Breakdown Bar & Adjust Option -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding: 10px 14px; background: var(--bg-tertiary); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 0.78rem; color: var(--text-secondary);">Daily Limit:</span>
+                <span id="dayBudgetBreakdownText" style="font-size: 0.82rem; font-weight: 700; font-family: var(--font-mono); color: #fff;">Base: ₹2,000</span>
+                <span id="badgeCustomIndicator" class="badge-custom-budget" style="display: none;">⭐ Custom Day Target</span>
+                <span id="badgeFixedDeductionIndicator" class="badge-fixed-deduction" style="display: none;">📌 Fixed: -₹400</span>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnOpenCustomDayBudget" title="Adjust budget if needing more or less money on this day">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                Need More / Less Money?
+              </button>
+            </div>
+          </div>
+
+          <!-- Add Expense Form -->
+          <div class="expense-form-card">
+            <form id="expenseForm">
+              <div class="form-row">
+                <div>
+                  <input type="text" id="expenseTitleInput" class="input-field" placeholder="Expense description (e.g. Lunch, Auto)" required autocomplete="off">
+                </div>
+                <div>
+                  <input type="number" id="expenseAmountInput" class="input-field" placeholder="Amount (₹)" step="1" min="1" required>
+                </div>
+                <div>
+                  <select id="expenseCategorySelect" class="select-field">
+                    <option value="Food">🍔 Food & Dining</option>
+                    <option value="Transport">🚗 Commute & Travel</option>
+                    <option value="Bills">💡 Bills & Utilities</option>
+                    <option value="Shopping">🛍️ Shopping & Groceries</option>
+                    <option value="Health">💊 Health & Care</option>
+                    <option value="Entertainment">🎬 Entertainment</option>
+                    <option value="Other">🏷️ Other</option>
+                  </select>
+                </div>
+                <div>
+                  <button type="submit" class="btn btn-primary" id="btnAddExpense">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quick category chips -->
+              <div class="category-chips">
+                <span style="font-size: 0.75rem; color: var(--text-muted); align-self: center;">Quick:</span>
+                <button type="button" class="chip-btn" data-cat="Food">🍔 Food</button>
+                <button type="button" class="chip-btn" data-cat="Transport">🚗 Commute</button>
+                <button type="button" class="chip-btn" data-cat="Bills">💡 Bills</button>
+                <button type="button" class="chip-btn" data-cat="Shopping">🛍️ Groceries</button>
+                <button type="button" class="chip-btn" data-cat="Entertainment">☕ Chai & Snacks</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Expenses List for Selected Day -->
+          <div class="expense-list-container">
+            <div class="expense-list-header">
+              <h3>Logged Items for This Day</h3>
+              <span id="expenseCountText" style="font-size: 0.8rem; color: var(--text-muted);">0 entries</span>
+            </div>
+
+            <div class="expense-items" id="expenseItemsList">
+              <!-- Dynamic expense item list or empty state -->
+            </div>
+          </div>
+
+          <!-- End Day & Sweep into Savings Button -->
+          <div class="savings-vault-banner" style="margin-top: 20px;">
+            <div class="vault-info">
+              <h4 id="endDayPromptTitle">Wrap Up & Bank Savings</h4>
+              <p id="endDayPromptDesc">Money left over at the end of the day moves directly into your Savings Vault!</p>
+            </div>
+            <button class="btn btn-success" id="btnBankTodaySavings">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span id="bankSavingsBtnLabel">Bank Leftover to Savings</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Right Column: Monthly Calendar Matrix & Savings Analytics -->
+        <section class="glass-card calendar-card" aria-label="Monthly Calendar & Vault Overview">
+          <div class="month-nav-header">
+            <h2 class="month-title" id="calendarMonthTitle">October 2026</h2>
+            <div class="month-nav-actions">
+              <button class="btn btn-secondary btn-sm" id="btnPrevMonth" title="Previous Month">&lt;</button>
+              <button class="btn btn-secondary btn-sm" id="btnNextMonth" title="Next Month">&gt;</button>
+            </div>
+          </div>
+
+          <!-- Calendar Days of Week Header -->
+          <div class="calendar-grid" style="margin-bottom: 4px;">
+            <div class="cal-day-header">SUN</div>
+            <div class="cal-day-header">MON</div>
+            <div class="cal-day-header">TUE</div>
+            <div class="cal-day-header">WED</div>
+            <div class="cal-day-header">THU</div>
+            <div class="cal-day-header">FRI</div>
+            <div class="cal-day-header">SAT</div>
+          </div>
+
+          <!-- Calendar Grid for the month -->
+          <div class="calendar-grid" id="monthCalendarGrid">
+            <!-- Dynamically populated with day cells -->
+          </div>
+
+          <!-- Legend for Calendar -->
+          <div style="display: flex; gap: 14px; justify-content: center; margin-top: 10px; font-size: 0.75rem; color: var(--text-muted); flex-wrap: wrap;">
+            <span style="display: inline-flex; align-items: center; gap: 5px;">
+              <span style="width: 10px; height: 10px; border-radius: 2px; background: var(--success); display: inline-block;"></span>
+              Under Budget (Saved)
+            </span>
+            <span style="display: inline-flex; align-items: center; gap: 5px;">
+              <span style="width: 10px; height: 10px; border-radius: 2px; background: var(--danger); display: inline-block;"></span>
+              Over Budget (Exceeded)
+            </span>
+            <span style="display: inline-flex; align-items: center; gap: 5px;">
+              <span style="width: 10px; height: 10px; border-radius: 2px; border-top: 3px solid #fbbf24; background: var(--bg-secondary); display: inline-block;"></span>
+              Custom Target Day
+            </span>
+            <span style="display: inline-flex; align-items: center; gap: 5px;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: #a855f7; display: inline-block;"></span>
+              Fixed Weekly Deduction
+            </span>
+          </div>
+
+          <!-- Savings Vault Details & Projections -->
+          <div style="margin-top: 26px; border-top: 1px solid var(--border-subtle); padding-top: 20px;">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Savings Vault Breakdown
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.85rem;">
+              <div style="background: var(--bg-secondary); padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+                <div style="color: var(--text-muted); font-size: 0.74rem; text-transform: uppercase;">Days Banked</div>
+                <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-primary); font-family: var(--font-mono);" id="statDaysBanked">0 / 31 days</div>
+              </div>
+              <div style="background: var(--bg-secondary); padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+                <div style="color: var(--text-muted); font-size: 0.74rem; text-transform: uppercase;">Estimated Month-End Savings</div>
+                <div style="font-weight: 700; font-size: 1.1rem; color: #34d399; font-family: var(--font-mono);" id="statProjectedSavings">₹0.00</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Bottom Analytics Section: 7-Day Trend & Category Breakdown -->
+      <section class="analytics-section">
+        <div class="analytics-grid">
+          <!-- 7-Day History Chart -->
+          <div class="glass-card mini-chart-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h3>7-Day Spending vs Daily Limit</h3>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Red indicates over-limit days</span>
+            </div>
+            <div class="bar-chart-container" id="barChartContainer">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Category Breakdown -->
+          <div class="glass-card mini-chart-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h3>Spending by Category</h3>
+              <span id="categoryTotalText" style="font-size: 0.75rem; color: var(--text-muted);">This Month</span>
+            </div>
+            <div id="categoryBreakdownContainer" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+              <!-- Category bars rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- VIEW 2: FULL FINANCIAL ANALYSIS HUB -->
+    <div id="analysisView" class="view-section hidden">
+      <!-- Analysis Header & Period Switcher -->
+      <div class="analysis-header">
+        <div class="analysis-title-group">
+          <h2>Financial Analysis Hub</h2>
+          <p id="analysisSubtitle">Detailed breakdown of daily expenditure, limit discipline, and savings accrual</p>
+        </div>
+
+        <!-- 4 Analysis Horizons -->
+        <div class="period-tabs" id="analysisPeriodTabs">
+          <button type="button" class="period-tab active" data-period="this_month">Daily Spend (This Month)</button>
+          <button type="button" class="period-tab" data-period="7_days">Last 7 Days</button>
+          <button type="button" class="period-tab" data-period="30_days">Last 1 Month (30 Days)</button>
+          <button type="button" class="period-tab" data-period="90_days">Last 90 Days</button>
+        </div>
+      </div>
+
+      <!-- Analysis KPI Cards (6 Key Metrics) -->
+      <div class="analysis-kpi-grid">
+        <div class="analysis-kpi-card">
+          <span class="kpi-label">Total Amount Spent</span>
+          <div class="kpi-value" id="kpiTotalSpent">₹0.00</div>
+          <span class="kpi-sub" id="kpiTotalSpentSub">Across active period</span>
+        </div>
+
+        <div class="analysis-kpi-card">
+          <span class="kpi-label">Target Period Budget</span>
+          <div class="kpi-value" id="kpiTotalBudget">₹0.00</div>
+          <span class="kpi-sub" id="kpiTotalBudgetSub">Cumulative daily allowances</span>
+        </div>
+
+        <div class="analysis-kpi-card savings-card">
+          <span class="kpi-label">Total Savings Banked</span>
+          <div class="kpi-value" id="kpiTotalSaved">₹0.00</div>
+          <span class="kpi-sub" id="kpiSavingsRateSub">0% overall savings rate</span>
+        </div>
+
+        <div class="analysis-kpi-card">
+          <span class="kpi-label">Average Daily Spend</span>
+          <div class="kpi-value" id="kpiAvgSpent">₹0.00</div>
+          <span class="kpi-sub" id="kpiAvgLimitSub">vs ₹0.00 / day budget</span>
+        </div>
+
+        <div class="analysis-kpi-card">
+          <span class="kpi-label">Limit Discipline</span>
+          <div class="kpi-value" id="kpiLimitDiscipline" style="color: #38bdf8;">0 / 0 Days</div>
+          <span class="kpi-sub" id="kpiExceededSub">0 days exceeded limit</span>
+        </div>
+
+        <div class="analysis-kpi-card">
+          <span class="kpi-label">Peak Spending Day</span>
+          <div class="kpi-value" id="kpiPeakDay" style="font-size: 1.35rem;">₹0.00</div>
+          <span class="kpi-sub" id="kpiPeakDayDate">None</span>
+        </div>
+      </div>
+
+      <!-- Timeline Trend Chart Card -->
+      <div class="glass-card timeline-card">
+        <div class="timeline-chart-header">
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700;">Daily Spending Timeline vs Daily Limit</h3>
+            <span style="font-size: 0.8rem; color: var(--text-muted);" id="timelineChartSubtitle">Hover bars to inspect daily expenditure</span>
+          </div>
+          <div style="display: flex; gap: 14px; font-size: 0.75rem; color: var(--text-muted); align-items: center;">
+            <span style="display: flex; align-items: center; gap: 5px;">
+              <span style="width: 10px; height: 10px; border-radius: 2px; background: #6366f1;"></span> Normal
+            </span>
+            <span style="display: flex; align-items: center; gap: 5px;">
+              <span style="width: 10px; height: 10px; border-radius: 2px; background: #ef4444;"></span> Over Limit
+            </span>
+            <span style="display: flex; align-items: center; gap: 5px;">
+              <span style="width: 12px; height: 2px; background: #818cf8;"></span> Daily Limit Line
+            </span>
+          </div>
+        </div>
+
+        <div class="timeline-scroll-wrap">
+          <div class="timeline-chart-bars" id="analysisTimelineBars">
+            <!-- Dynamically generated bars and budget threshold line -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Breakdown & Performance Insights -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 26px;">
+        <div class="glass-card" style="padding: 24px;">
+          <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 16px;">Category Spending Distribution</h3>
+          <div id="analysisCategoryContainer" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Category distribution -->
+          </div>
+        </div>
+
+        <div class="glass-card" style="padding: 24px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 12px;">Financial Performance Highlights</h3>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px;" id="analysisHighlightsText">
+              Loading financial highlights...
+            </p>
+          </div>
+          <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-md); padding: 16px;">
+            <div style="font-weight: 700; font-size: 0.95rem; color: #34d399; margin-bottom: 4px;">Savings Vault Protection Tip</div>
+            <div style="font-size: 0.82rem; color: #cbd5e1;">Keeping daily spends within allowance sweeps all unspent funds into your Savings Vault at midnight. Even saving ₹500/day adds ₹15,000 every month!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Day-by-Day Historical Audit Table -->
+      <div class="glass-card audit-table-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700;">Day-by-Day Historical Audit Log</h3>
+            <span style="font-size: 0.8rem; color: var(--text-muted);" id="analysisTableSub">Showing all recorded days in this period</span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="analysis-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Total Spent (₹)</th>
+                <th>Daily Limit (₹)</th>
+                <th>Status / Variance</th>
+                <th>Top Recorded Expense</th>
+              </tr>
+            </thead>
+            <tbody id="analysisTableBody">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 1: CUSTOM DAY BUDGET (NEED MORE / LESS MONEY) -->
+  <div class="modal-overlay" id="customDayBudgetModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="customDayModalTitle">Adjust Budget for This Day</h3>
+        <p>Need more money for a party or trip, or spending less today? Set a custom target for this day. This adjustment applies strictly to <strong>current day and days to come</strong>, completely protecting past days' savings and loss!</p>
+      </div>
+
+      <form id="customDayBudgetForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Selected Date</label>
+            <div id="customDayDateLabel" style="font-weight: 700; font-family: var(--font-mono); color: #818cf8; font-size: 1.05rem;">
+              Oct 23, 2026
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="customDayAmountInput">Custom Day Budget Target (₹)</label>
+            <div class="currency-input-wrap">
+              <span style="font-size: 1.3rem; font-weight: 700; color: #818cf8; margin-right: 6px;">₹</span>
+              <input type="number" id="customDayAmountInput" class="currency-input" placeholder="e.g. 4500 (more) or 800 (less)" min="1" step="any" required>
+            </div>
+          </div>
+
+          <!-- Dynamic Rebalancing Math Preview -->
+          <div class="rebalance-preview-box" id="rebalancePreviewBox">
+            <div style="font-weight: 700; color: #fff; margin-bottom: 4px;">Dynamic Monthly Rebalancing:</div>
+            <div id="rebalanceMathText">Loading budget impact...</div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="justify-content: space-between;">
+          <button type="button" class="btn btn-danger-soft btn-sm" id="btnResetDayBudget">
+            Reset to Standard Budget
+          </button>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-ghost" id="btnCancelCustomDayModal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Adjustment</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: USER PROFILE & FIXED WEEKLY DEDUCTIONS -->
+  <div class="modal-overlay" id="profileModal">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-header">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <h3>User Profile & Budget Rules</h3>
+            <p>Manage your permanent base salary and weekly fixed expense deductions.</p>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnCloseProfileModal" style="font-size: 1.2rem;">✕</button>
+        </div>
+      </div>
+
+      <!-- Profile Tabs -->
+      <div class="auth-toggle" style="margin-bottom: 20px;">
+        <button type="button" class="auth-tab-btn active" id="tabProfileSalary">👤 Profile & Base Salary</button>
+        <button type="button" class="auth-tab-btn" id="tabProfileFixed">📌 Fixed Weekly Expenses</button>
+      </div>
+
+      <!-- Tab Content 1: User Profile & Base Salary -->
+      <div id="panelProfileSalary">
+        <form id="profileForm">
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="profileFullNameInput">Full Name</label>
+              <input type="text" id="profileFullNameInput" class="input-field" placeholder="Your Name" required>
+            </div>
+
+            <div class="form-group">
+              <label for="profileBaseSalaryInput">Base Monthly Salary (₹)</label>
+              <div class="currency-input-wrap">
+                <span style="font-size: 1.3rem; font-weight: 700; color: #818cf8; margin-right: 6px;">₹</span>
+                <input type="number" id="profileBaseSalaryInput" class="currency-input" placeholder="e.g. 62000" min="1" step="any" required>
+              </div>
+              <span style="font-size: 0.78rem; color: #34d399; margin-top: 6px; display: block;">
+                ✓ Saved permanently. You do NOT need to re-enter your salary each month. DayWise automatically carries it forward!
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label for="profileCurrencySelect">Currency</label>
+              <select id="profileCurrencySelect" class="select-field">
+                <option value="₹" selected>INR (₹) - Indian Rupee</option>
+                <option value="$">USD ($) - US Dollar</option>
+                <option value="€">EUR (€) - Euro</option>
+                <option value="£">GBP (£) - British Pound</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary" id="btnSaveProfile">
+              Save Profile Changes
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tab Content 2: Fixed Weekly Recurring Deductions -->
+      <div id="panelProfileFixed" style="display: none;">
+        <div class="modal-body">
+          <p style="font-size: 0.84rem; color: var(--text-secondary); margin-bottom: 16px;">
+            Specify fixed expenses (e.g. Metro Pass, Gym, Coaching). These amounts will be deducted <strong>from that specific day's budget only</strong>!
+          </p>
+
+          <!-- Add New Fixed Expense Form -->
+          <div style="background: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px;">
+            <h4 style="font-size: 0.92rem; font-weight: 700; margin-bottom: 12px; color: #818cf8;">+ Add Fixed Deduction</h4>
+            <form id="addFixedExpenseForm">
+              <div style="display: grid; grid-template-columns: 1fr 140px; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="fixedExpenseTitle" class="input-field" placeholder="Title (e.g. Metro Pass, Gym Session)" required>
+                <input type="number" id="fixedExpenseAmount" class="input-field" placeholder="Amount (₹)" min="1" step="1" required>
+              </div>
+
+              <div style="margin-bottom: 12px;">
+                <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Deduct on these Days of the Week:</label>
+                <div class="dow-chips" id="fixedExpenseDowChips">
+                  <div class="dow-chip" data-day="0">Sun</div>
+                  <div class="dow-chip" data-day="1">Mon</div>
+                  <div class="dow-chip" data-day="2">Tue</div>
+                  <div class="dow-chip" data-day="3">Wed</div>
+                  <div class="dow-chip" data-day="4">Thu</div>
+                  <div class="dow-chip" data-day="5">Fri</div>
+                  <div class="dow-chip" data-day="6">Sat</div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-sm" id="btnSaveFixedExpense">
+                Add Weekly Deduction
+              </button>
+            </form>
+          </div>
+
+          <!-- List of Configured Fixed Deductions -->
+          <h4 style="font-size: 0.88rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px;">Active Fixed Deductions</h4>
+          <div id="fixedExpensesListContainer" style="max-height: 240px; overflow-y: auto;">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Salary Onboarding & Configuration (First time prompt) -->
+  <div class="modal-overlay" id="salaryModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="salaryModalTitle">Monthly Salary Setup</h3>
+        <p>Set your monthly base salary in Rupees (₹). It will remain saved in your profile permanently so you don't need to re-enter it every month.</p>
+      </div>
+
+      <form id="salaryForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="salaryCurrencySelect">Currency</label>
+            <select id="salaryCurrencySelect" class="select-field">
+              <option value="₹" selected>INR (₹) - Indian Rupee</option>
+              <option value="$">USD ($) - US Dollar</option>
+              <option value="€">EUR (€) - Euro</option>
+              <option value="£">GBP (£) - British Pound</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="salaryAmountInput">Monthly Salary</label>
+            <div class="currency-input-wrap">
+              <span id="salaryCurrencySymbol" style="font-size: 1.3rem; font-weight: 700; color: #818cf8; margin-right: 6px;">₹</span>
+              <input type="number" id="salaryAmountInput" class="currency-input" placeholder="e.g. 62000" min="1" step="any" required>
+            </div>
+          </div>
+
+          <div class="salary-preview-math" id="salaryPreviewMath">
+            <span>Daily Budget Limit:</span>
+            <span><strong id="previewDailyLimit">₹0.00</strong> / day (<span id="previewDaysCount">31</span> days)</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btnCancelSalaryModal" style="display: none;">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveSalary">
+            Save & Continue to Dashboard
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: Multi-User Authentication (Login / Register) -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-card">
+      <div class="modal-header" style="text-align: center;">
+        <div class="logo-icon" style="margin: 0 auto 14px; width: 48px; height: 48px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <h3 id="authTitle">Welcome to DayWise</h3>
+        <p id="authSubtitle">Login with your username and password</p>
+      </div>
+
+      <div class="auth-toggle">
+        <button type="button" class="auth-tab-btn active" id="tabLogin">Sign In</button>
+        <button type="button" class="auth-tab-btn" id="tabRegister">Create Account</button>
+      </div>
+
+      <form id="authForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="authUsernameInput">Username</label>
+            <input type="text" id="authUsernameInput" class="input-field" placeholder="Enter username" required autocomplete="username">
+          </div>
+
+          <div class="form-group">
+            <label for="authPasswordInput">Password</label>
+            <input type="password" id="authPasswordInput" class="input-field" placeholder="Enter password" required autocomplete="current-password">
+          </div>
+
+          <div id="authErrorMsg" style="color: var(--danger); font-size: 0.82rem; margin-top: 8px; display: none;"></div>
+        </div>
+
+        <div class="modal-footer" style="flex-direction: column; gap: 10px;">
+          <button type="submit" class="btn btn-primary" style="width: 100%;" id="btnAuthSubmit">
+            Sign In
+          </button>
+          <button type="button" class="btn btn-secondary" style="width: 100%;" id="btnQuickDemoLogin">
+            ⚡ Quick Demo Login (Pre-filled User Alex)
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Audio & Script files -->
+  <script src="js/storage.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
