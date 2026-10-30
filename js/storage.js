@@ -15,43 +15,24 @@ class DayWiseStorage {
     this.initDefaultUsers();
   }
 
-  // Pre-seed a default demo user if no users exist
+  // Initialize users storage cleanly without demo seed
   initDefaultUsers() {
-    const existing = localStorage.getItem(STORAGE_KEYS.USERS);
+    let existing = null;
+    try {
+      existing = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS));
+    } catch (e) {
+      existing = null;
+    }
+
     if (!existing) {
-      const defaultUsers = {
-        'alex': {
-          username: 'alex',
-          name: 'Alex Sharma',
-          password: 'password123',
-          currency: '₹',
-          baseSalary: 62000, // Fixed base salary across all months
-          salaries: {},
-          expenses: [],
-          closedDays: [],
-          dayBudgetOverrides: {
-            '2026-10-24': 4500, // Saturday: Needs more money for weekend event
-            '2026-10-27': 800,  // Tuesday: Needs less money (quiet home day)
-          },
-          fixedExpenses: [
-            {
-              id: 'fix_1',
-              title: 'Metro Pass Weekly Reload',
-              amount: 400,
-              daysOfWeek: [1], // Monday
-              active: true,
-            },
-            {
-              id: 'fix_2',
-              title: 'Weekend Fitness / Sports Club',
-              amount: 600,
-              daysOfWeek: [6], // Saturday
-              active: true,
-            }
-          ],
-        }
-      };
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(defaultUsers));
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify({}));
+    } else if (existing['alex'] && existing['alex'].name === 'Alex Sharma') {
+      // Remove any lingering default demo user
+      delete existing['alex'];
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(existing));
+      if (localStorage.getItem(STORAGE_KEYS.ACTIVE_USER) === 'alex') {
+        localStorage.removeItem(STORAGE_KEYS.ACTIVE_USER);
+      }
     }
   }
 
@@ -101,13 +82,20 @@ class DayWiseStorage {
   }
 
   register(username, password, currency = '₹', baseSalary = 60000) {
+    if (!username || typeof username !== 'string' || /\s/.test(username)) {
+      throw new Error('Username must not contain any spaces.');
+    }
     const cleanUser = username.trim().toLowerCase();
-    if (!cleanUser || !password) {
-      throw new Error('Username and password are required');
+    if (!cleanUser) {
+      throw new Error('Username and password are required.');
+    }
+    if (!password) {
+      throw new Error('Password is required.');
     }
     const users = this.getAllUsers();
-    if (users[cleanUser]) {
-      throw new Error('Username already exists. Please choose another or sign in.');
+    const isTaken = Object.keys(users).some(u => u.toLowerCase() === cleanUser);
+    if (isTaken || users[cleanUser]) {
+      throw new Error('A user with this username already exists. Please choose a different username.');
     }
 
     users[cleanUser] = {
@@ -129,9 +117,13 @@ class DayWiseStorage {
   }
 
   login(username, password) {
+    if (!username || typeof username !== 'string' || /\s/.test(username)) {
+      throw new Error('Username must not contain any spaces.');
+    }
     const cleanUser = username.trim().toLowerCase();
     const users = this.getAllUsers();
-    const user = users[cleanUser];
+    const matchKey = Object.keys(users).find(u => u.toLowerCase() === cleanUser) || cleanUser;
+    const user = users[matchKey];
 
     if (!user || user.password !== password) {
       throw new Error('Invalid username or password.');
@@ -670,139 +662,7 @@ class DayWiseStorage {
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   }
 
-  /**
-   * Pre-load realistic 90-day demo dataset for the active user in Indian Rupees (₹)
-   * with custom high/low budget days and fixed weekly deductions pre-configured!
-   */
-  loadDemoDataset(yearMonth = '2026-10', todayDay = 23) {
-    const user = this.getActiveUser();
-    if (!user) return;
 
-    user.currency = '₹';
-    user.baseSalary = 62000;
-    user.salaries = user.salaries || {};
-
-    // 4 months
-    user.salaries['2026-07'] = 62000;
-    user.salaries['2026-08'] = 62000;
-    user.salaries['2026-09'] = 60000;
-    user.salaries['2026-10'] = 62000;
-
-    // Day budget overrides (more/less money days)
-    user.dayBudgetOverrides = {
-      '2026-10-24': 4500, // Saturday: Weekend party / celebration (needs more money)
-      '2026-10-27': 800,  // Tuesday: Frugal day at home (needs less money)
-    };
-
-    // Fixed weekly recurring expenses
-    user.fixedExpenses = [
-      {
-        id: 'fix_1',
-        title: 'Metro Pass Weekly Reload',
-        amount: 400,
-        daysOfWeek: [1], // Monday
-        active: true,
-      },
-      {
-        id: 'fix_2',
-        title: 'Weekend Sports & Club',
-        amount: 600,
-        daysOfWeek: [6], // Saturday
-        active: true,
-      }
-    ];
-
-    const samplePool = [
-      { title: 'Morning Filter Coffee & Dosa', cat: 'Food', amount: 120 },
-      { title: 'Metro Commute & Auto', cat: 'Transport', amount: 150 },
-      { title: 'Weekly Vegetables & Supermarket', cat: 'Shopping', amount: 650 },
-      { title: 'Team Thali Lunch', cat: 'Food', amount: 320 },
-      { title: 'Broadband Fiber Bill', cat: 'Bills', amount: 899 },
-      { title: 'Electricity Utility Bill', cat: 'Bills', amount: 1450 },
-      { title: 'Pharmacy Vitamins & Medicines', cat: 'Health', amount: 380 },
-      { title: 'Weekend Movie & Popcorn', cat: 'Entertainment', amount: 620 },
-      { title: 'Dinner Zomato Takeout', cat: 'Food', amount: 480 },
-      { title: 'Cab / Uber Ride', cat: 'Transport', amount: 260 },
-      { title: 'Clothing & Apparel Shopping', cat: 'Shopping', amount: 1800 },
-      { title: 'Mobile Postpaid Recharge', cat: 'Bills', amount: 499 },
-      { title: 'Gym & Fitness Membership', cat: 'Health', amount: 1200 },
-    ];
-
-    user.expenses = [];
-    user.closedDays = [];
-
-    const refDate = new Date(2026, 9, todayDay); // Oct 23, 2026
-
-    for (let i = 89; i >= 0; i--) {
-      const d = new Date(refDate);
-      d.setDate(refDate.getDate() - i);
-      const dateStr = this.formatDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
-      const isPast = i > 0;
-
-      const dayMod = (i * 7 + d.getDate()) % 11;
-
-      if (dayMod === 3) {
-        user.expenses.push({
-          id: `demo_${i}_1`,
-          date: dateStr,
-          title: 'Electronics / Gadget Purchase',
-          amount: 2200,
-          category: 'Shopping',
-          createdAt: d.toISOString()
-        });
-        user.expenses.push({
-          id: `demo_${i}_2`,
-          date: dateStr,
-          title: 'Special Dinner Party',
-          amount: 950,
-          category: 'Food',
-          createdAt: d.toISOString()
-        });
-      } else if (dayMod === 7) {
-        user.expenses.push({
-          id: `demo_${i}_1`,
-          date: dateStr,
-          title: samplePool[(i * 3) % samplePool.length].title,
-          amount: 850,
-          category: 'Shopping',
-          createdAt: d.toISOString()
-        });
-        user.expenses.push({
-          id: `demo_${i}_2`,
-          date: dateStr,
-          title: samplePool[(i * 2 + 1) % samplePool.length].title,
-          amount: 550,
-          category: 'Food',
-          createdAt: d.toISOString()
-        });
-      } else {
-        const item1 = samplePool[(i * 2) % samplePool.length];
-        const item2 = samplePool[(i * 4 + 3) % samplePool.length];
-        user.expenses.push({
-          id: `demo_${i}_1`,
-          date: dateStr,
-          title: item1.title,
-          amount: item1.amount,
-          category: item1.cat,
-          createdAt: d.toISOString()
-        });
-        user.expenses.push({
-          id: `demo_${i}_2`,
-          date: dateStr,
-          title: item2.title,
-          amount: item2.amount,
-          category: item2.cat,
-          createdAt: d.toISOString()
-        });
-      }
-
-      if (isPast) {
-        user.closedDays.push(dateStr);
-      }
-    }
-
-    this.saveActiveUserData(user);
-  }
 }
 
 // Global instance

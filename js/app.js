@@ -34,9 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const userBadge = document.getElementById('userBadge');
   const btnOpenProfile = document.getElementById('btnOpenProfile');
   const btnLogout = document.getElementById('btnLogout');
-  const btnLoadDemo = document.getElementById('btnLoadDemo');
-
-  // Modals
   const authModal = document.getElementById('authModal');
   const authForm = document.getElementById('authForm');
   const authTitle = document.getElementById('authTitle');
@@ -45,9 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabRegister = document.getElementById('tabRegister');
   const authUsernameInput = document.getElementById('authUsernameInput');
   const authPasswordInput = document.getElementById('authPasswordInput');
+  const authConfirmPasswordGroup = document.getElementById('authConfirmPasswordGroup');
+  const authConfirmPasswordInput = document.getElementById('authConfirmPasswordInput');
   const authErrorMsg = document.getElementById('authErrorMsg');
   const btnAuthSubmit = document.getElementById('btnAuthSubmit');
-  const btnQuickDemoLogin = document.getElementById('btnQuickDemoLogin');
 
   const salaryModal = document.getElementById('salaryModal');
   const salaryForm = document.getElementById('salaryForm');
@@ -235,18 +233,42 @@ document.addEventListener('DOMContentLoaded', () => {
       tabRegister.classList.add('active');
       tabLogin.classList.remove('active');
       btnAuthSubmit.textContent = 'Create Account';
+      if (authConfirmPasswordGroup) {
+        authConfirmPasswordGroup.style.display = 'block';
+      }
+      if (authConfirmPasswordInput) {
+        authConfirmPasswordInput.required = true;
+        authConfirmPasswordInput.value = '';
+      }
+      authPasswordInput.autocomplete = 'new-password';
     } else {
       authTitle.textContent = 'Welcome to DayWise';
       authSubtitle.textContent = 'Login with your username and password';
       tabLogin.classList.add('active');
       tabRegister.classList.remove('active');
       btnAuthSubmit.textContent = 'Sign In';
+      if (authConfirmPasswordGroup) {
+        authConfirmPasswordGroup.style.display = 'none';
+      }
+      if (authConfirmPasswordInput) {
+        authConfirmPasswordInput.required = false;
+        authConfirmPasswordInput.value = '';
+      }
+      authPasswordInput.autocomplete = 'current-password';
     }
   }
 
   function hideAuthModal() {
     authModal.classList.remove('active');
     authForm.reset();
+    if (authConfirmPasswordGroup) {
+      authConfirmPasswordGroup.style.display = 'none';
+    }
+    if (authConfirmPasswordInput) {
+      authConfirmPasswordInput.required = false;
+      authConfirmPasswordInput.value = '';
+    }
+    authErrorMsg.style.display = 'none';
   }
 
   function updateUserNavbar(user) {
@@ -1001,11 +1023,89 @@ document.addEventListener('DOMContentLoaded', () => {
     tabLogin.addEventListener('click', () => showAuthModal(false));
     tabRegister.addEventListener('click', () => showAuthModal(true));
 
+    // Real-time Space Prevention on Username Input
+    authUsernameInput.addEventListener('keydown', (e) => {
+      if (e.key === ' ') {
+        e.preventDefault();
+        authErrorMsg.textContent = 'Spaces are not allowed in usernames.';
+        authErrorMsg.style.display = 'block';
+      }
+    });
+
+    authUsernameInput.addEventListener('input', () => {
+      if (/\s/.test(authUsernameInput.value)) {
+        authUsernameInput.value = authUsernameInput.value.replace(/\s+/g, '');
+        authErrorMsg.textContent = 'Spaces are not allowed in usernames.';
+        authErrorMsg.style.display = 'block';
+      } else if (authErrorMsg.textContent.includes('Spaces') || authErrorMsg.textContent.includes('spaces')) {
+        authErrorMsg.style.display = 'none';
+      }
+    });
+
+    // Real-time Password Match Indication
+    const validatePasswordMatch = () => {
+      if (!isRegisterMode) return;
+      const p1 = authPasswordInput.value;
+      const p2 = authConfirmPasswordInput.value;
+      if (p1 && p2 && p1 !== p2) {
+        authErrorMsg.textContent = 'Passwords do not match.';
+        authErrorMsg.style.display = 'block';
+      } else if (p1 && p2 && p1 === p2) {
+        if (authErrorMsg.textContent.includes('Passwords do not match') || authErrorMsg.textContent.includes('passwords')) {
+          authErrorMsg.style.display = 'none';
+        }
+      }
+    };
+
+    authPasswordInput.addEventListener('input', validatePasswordMatch);
+    authConfirmPasswordInput.addEventListener('input', validatePasswordMatch);
+
     // Auth Form Submit
     authForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const uname = authUsernameInput.value.trim();
+      const rawUname = authUsernameInput.value;
       const pword = authPasswordInput.value;
+      const confirmPword = authConfirmPasswordInput ? authConfirmPasswordInput.value : '';
+
+      // Usernames must be without space
+      if (/\s/.test(rawUname)) {
+        authErrorMsg.textContent = 'Username must not contain any spaces.';
+        authErrorMsg.style.display = 'block';
+        authUsernameInput.focus();
+        return;
+      }
+
+      const uname = rawUname.trim();
+      if (!uname) {
+        authErrorMsg.textContent = 'Please enter a valid username.';
+        authErrorMsg.style.display = 'block';
+        authUsernameInput.focus();
+        return;
+      }
+
+      if (isRegisterMode) {
+        if (!pword) {
+          authErrorMsg.textContent = 'Please enter a password.';
+          authErrorMsg.style.display = 'block';
+          authPasswordInput.focus();
+          return;
+        }
+
+        if (!confirmPword) {
+          authErrorMsg.textContent = 'Please re-enter your password to confirm.';
+          authErrorMsg.style.display = 'block';
+          authConfirmPasswordInput.focus();
+          return;
+        }
+
+        // Check if passwords match
+        if (pword !== confirmPword) {
+          authErrorMsg.textContent = 'Passwords do not match. Please ensure both passwords match.';
+          authErrorMsg.style.display = 'block';
+          authConfirmPasswordInput.focus();
+          return;
+        }
+      }
 
       try {
         if (isRegisterMode) {
@@ -1024,30 +1124,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // 1-Click Demo Login
-    btnQuickDemoLogin.addEventListener('click', () => {
-      window.storage.setActiveUsername('alex');
-      const user = window.storage.getActiveUser();
-      window.storage.loadDemoDataset('2026-10', 23);
-      hideAuthModal();
-      updateUserNavbar(user);
-      showToast('Logged in as Alex with custom day targets & weekly fixed deductions pre-configured!', 'success');
-      refreshActiveView();
-    });
-
     // Logout
     btnLogout.addEventListener('click', () => {
       window.storage.logout();
       showToast('Logged out successfully.', 'warning');
       showAuthModal(false);
-    });
-
-    // Load Demo Data Button (90 Days)
-    btnLoadDemo.addEventListener('click', () => {
-      window.storage.loadDemoDataset(activeYearMonth, 23);
-      showToast('Loaded realistic dataset with custom targets & fixed deductions!', 'success');
-      window.visuals.playTone('success');
-      refreshActiveView();
     });
 
     // Add Expense Form

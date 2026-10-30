@@ -59,10 +59,6 @@
           Profile & Rules
         </button>
 
-        <button class="btn btn-ghost btn-sm" id="btnLoadDemo" title="Load sample 90-day Indian Rupee dataset">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Demo Data (90D)
-        </button>
 
         <button class="btn btn-danger-soft btn-sm" id="btnLogout" title="Log out of current profile">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -714,12 +710,18 @@
         <div class="modal-body">
           <div class="form-group">
             <label for="authUsernameInput">Username</label>
-            <input type="text" id="authUsernameInput" class="input-field" placeholder="Enter username" required autocomplete="username">
+            <input type="text" id="authUsernameInput" class="input-field" placeholder="Enter username (no spaces)" required autocomplete="username" pattern="^\S+$" title="Username cannot contain spaces">
+            <small style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">Usernames must not contain spaces.</small>
           </div>
 
           <div class="form-group">
             <label for="authPasswordInput">Password</label>
             <input type="password" id="authPasswordInput" class="input-field" placeholder="Enter password" required autocomplete="current-password">
+          </div>
+
+          <div class="form-group" id="authConfirmPasswordGroup" style="display: none;">
+            <label for="authConfirmPasswordInput">Confirm Password</label>
+            <input type="password" id="authConfirmPasswordInput" class="input-field" placeholder="Re-enter password" autocomplete="new-password">
           </div>
 
           <div id="authErrorMsg" style="color: var(--danger); font-size: 0.82rem; margin-top: 8px; display: none;"></div>
@@ -728,9 +730,6 @@
         <div class="modal-footer" style="flex-direction: column; gap: 10px;">
           <button type="submit" class="btn btn-primary" style="width: 100%;" id="btnAuthSubmit">
             Sign In
-          </button>
-          <button type="button" class="btn btn-secondary" style="width: 100%;" id="btnQuickDemoLogin">
-            ⚡ Quick Demo Login (Pre-filled User Alex)
           </button>
         </div>
       </form>
